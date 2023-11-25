@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <title>Location</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      type="text/javascript"
+      src="https://api.longdo.com/map/?key=071cd3995e59f68abdc43e6d73033a33"
+    ></script>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <div id="show"></div>
+
+    <script>
+      const option = {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+      };
+
+      const areaTrangHos = [
+        [7.572816819805236, 99.61888473083937],
+        [7.573764797788778, 99.61958392292514],
+        [7.5742745598375905, 99.62137927814636],
+        [7.571215991802999, 99.621997267082],
+        [7.571350143394832, 99.62029665236273],
+        [7.570943224615562, 99.61902006376931],
+      ];
+
+      const areaClinic = [
+        [7.565342897644275, 99.62584973987205],
+        [7.565102590382864, 99.62588801629683],
+        [7.56513737170665, 99.62604112199655],
+        [7.565360288296149, 99.62601560437949],
+      ];
+
+      function show(id, data) {
+        const ele = document.getElementById(id);
+        ele.innerHTML = data;
+      }
+
+      function convertToLongdoCoord(coord) {
+        return new Promise(function (resolve, reject) {
+
+          // The producing code (this may take some time)
+          let coordLen = coord.length;
+          let arr = [];
+          for (let i = 0; i < coordLen; i++) {
+            arr[i] = JSON.parse(
+              `{ \"lon\": ${coord[i][1]}, \"lat\": ${coord[i][0]} }`
+            );
+          }
+
+          resolve(arr);
+          reject("Fail !");
+        });
+      }
+
+      function checkPoint(polygon, point) {
+        return new Promise(function (resolve, reject) {
+
+          // The producing code (this may take some time)
+          //A point is in a polygon if a line from the point to infinity crosses the polygon an odd number of times
+          let odd = false;
+          //For each edge (In this case for each point of the polygon and the previous one)
+          for (let i = 0, j = polygon.length - 1; i < polygon.length; i++) {
+            //If a line from the point into infinity crosses this edge
+            if (
+              polygon[i][1] > point[1] !== polygon[j][1] > point[1] && // One point needs to be above, one below our y coordinate
+              // ...and the edge doesn't cross our Y corrdinate before our x coordinate (but between our x coordinate and infinity)
+              point[0] <
+                ((polygon[j][0] - polygon[i][0]) * (point[1] - polygon[i][1])) /
+                  (polygon[j][1] - polygon[i][1]) +
+                  polygon[i][0]
+            ) {
+              // Invert odd
+              odd = !odd;
+            }
+            j = i;
+          }
+
+          resolve(odd);
+          reject("Fail !");
+        });
+      }
+
+      async function success(pos, areaCoordinate) {
+        const crd = pos.coords;
+        let position = [crd.latitude, crd.longitude];
+        let data;
+        const inPolygon = await checkPoint(areaCoordinate, position);
+        console.log(`In Polygon ${inPolygon}.`);
+        console.log(`Lat: ${crd.latitude} , Lon: ${crd.longitude}`);
+        if (inPolygon) {
+          data = "<input id='checkin' type='button' value='Click to Check In' onclick=toClockIn()>";
+         } else {
+          data = '<p> You are Outside the Area ! </p>';
+        }
+        show('show', data);
+
+        //mapPlot(crd.latitude, crd.longitude, areaCoordinate);
+      }
+
+      function error(err) {
+        console.warn(`ERROR(${err.code}): ${err.message}`);
+        show("map","Can not locate your location");
+      }
+
+      async function mapPlot(lat, lon, areaCoordinate) {
+        const convertCoord = await convertToLongdoCoord(areaCoordinate);
+        console.log(convertCoord);
+
+        map = new longdo.Map({
+          placeholder: document.getElementById('map'),
+        });
+
+        map.location({ lon: `${lon}`, lat: `${lat}` }, true); // go to 100, 16 when created map
+        map.zoom(18, true);
+        map.Ui.lockMap();
+        map.Ui.DPad.visible(false);
+        map.Ui.Zoombar.visible(false);
+        map.Ui.Toolbar.visible(false);
+        map.Ui.LayerSelector.visible(false);
+        map.Ui.Fullscreen.visible(false);
+
+        var polygon = new longdo.Polygon(
+          convertCoord,
+          {
+            lineWidth: 2,
+            lineColor: 'rgba(0, 0, 0, 1)',
+            fillColor: 'rgba(255, 0, 0, 0.4)',
+            visibleRange: { min: 7, max: 18 },
+            editable: false,
+            weight: longdo.OverlayWeight.Top,
+          }
+        );
+
+        map.Overlays.add(polygon); // add geometry object
+      }
+
+      function toClockIn() {
+        show("show", "Hello");
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          success(position, areaClinic);
+        },
+        error,
+        option
+      );
+    </script>
+  </body>
+</html>

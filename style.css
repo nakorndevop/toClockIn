@@ -1,0 +1,26 @@
+h1, h2 {
+  font-family: Lato;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0px;
+  height: 100%;
+}
+
+#map {
+  height: 75%;
+}
+
+#show {
+  margin: auto;
+  width: 100%;
+  text-align: center;
+}
+
+#checkin {
+  width: 30%;
+}
